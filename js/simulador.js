@@ -1,14 +1,6 @@
-/* ==========================================================================
-   Simulador de telemetría de Havva (JavaScript puro, sin jQuery)
-
-   Imita lo que publicaría el robot (o un ESP32) una vez por segundo.
-   La interfaz solo conoce tres funciones: alRecibir(), comando() e iniciar().
-   Por eso, cambiar la simulación por datos reales (WebSocket, MQTT o roslibjs)
-   no obliga a tocar el código de jQuery: ver conectarWebSocket() al final.
-
-   Nota: la simulación está acelerada (la batería baja ~10 veces más rápido
-   que en el robot real) para que las alertas se vean en una demostración.
-   ========================================================================== */
+// simulador de datos del robot (js normal, sin jquery)
+// manda un paquete cada segundo como si fuera havva o un esp32.
+// la bateria baja mas rapido de lo normal para que se vean las alertas
 const HavvaSim = (function () {
   'use strict';
 
@@ -29,7 +21,7 @@ const HavvaSim = (function () {
     tempIzq: 41.5,         // °C
     tempDer: 43.0,         // °C
     cpu: 57,               // °C
-    distUmbral: 0.45,      // m, lo fija el operador desde el panel
+    distUmbral: 0.45,      // m, se cambia desde el form de umbrales
     enBase: false,
     ticksBase: 0,
     obstaculo: 0,
@@ -65,15 +57,15 @@ const HavvaSim = (function () {
   function tick() {
     const motoresOk = s.motorIzq && s.motorDer;
 
-    // 1. Velocidad objetivo según el modo
+    // velocidad segun el modo
     let objetivo = 0;
     if (!s.paro && motoresOk && !s.enBase) {
       if (s.modo === 'autonomo') objetivo = s.velMax * (0.75 + Math.random() * 0.25);
       else if (s.modo === 'base') objetivo = s.velMax * 0.8;
-      // en manual el robot espera comandos de teleoperación: objetivo = 0
+      // en manual se queda quieto
     }
 
-    // 2. LiDAR: pasillo libre con obstáculos ocasionales (una persona cruzando)
+    // lidar: de vez en cuando aparece un obstaculo
     if (s.obstaculo > 0) {
       s.obstaculo--;
       s.lidar = limitar(s.lidar + ruido(0.06), 0.22, 0.9);
@@ -94,11 +86,11 @@ const HavvaSim = (function () {
       s.avisoObstaculo = false;
     }
 
-    // 3. Dinámica simple de velocidad
+    // acelera y frena poco a poco
     s.vel += (objetivo - s.vel) * 0.45;
     if (s.vel < 0.005) s.vel = 0;
 
-    // 4. Odometría
+    // odometria
     if (s.vel > 0) {
       s.thetaDeg = (s.thetaDeg + ruido(9) + 360) % 360;
       const r = s.thetaDeg * Math.PI / 180;
@@ -108,18 +100,18 @@ const HavvaSim = (function () {
       s.thetaDeg = (s.thetaDeg + (s.motorIzq ? 6 : -6) + 360) % 360; // gira en su lugar
     }
 
-    // 5. Ultrasónico trasero
+    // ultrasonico
     s.ultra = limitar(s.ultra + ruido(6) + (120 - s.ultra) * 0.1, 25, 300);
 
-    // 6. Temperaturas (suben con la carga, bajan con el motor apagado)
+    // temperaturas (suben si el motor trabaja)
     const cargaIzq = s.motorIzq && !s.paro ? s.vel / 0.8 : 0;
     const cargaDer = s.motorDer && !s.paro ? s.vel / 0.8 : 0;
     s.tempIzq += (32 + 30 * cargaIzq - s.tempIzq) * 0.08 + ruido(0.3);
-    s.tempDer += (33 + 36 * cargaDer - s.tempDer) * 0.08 + ruido(0.3); // el derecho corre más caliente
+    s.tempDer += (33 + 36 * cargaDer - s.tempDer) * 0.08 + ruido(0.3); // el derecho se calienta un poco mas
     const cpuObjetivo = 50 + (s.modo === 'autonomo' && s.vel > 0 ? 18 : 4);
     s.cpu += (cpuObjetivo - s.cpu) * 0.1 + ruido(0.8);
 
-    // 7. Batería
+    // bateria
     if (s.enBase) {
       s.bateria = Math.min(100, s.bateria + 0.8);
       if (s.bateria >= 100 && !s.llena) {
@@ -130,7 +122,7 @@ const HavvaSim = (function () {
       s.bateria = Math.max(0, s.bateria - consumoPorTick());
     }
 
-    // 8. Regreso a base
+    // llega a la base despues de unos segundos
     if (s.modo === 'base' && !s.enBase && s.vel > 0.05) {
       s.ticksBase++;
       if (s.ticksBase >= 10) {
@@ -141,7 +133,7 @@ const HavvaSim = (function () {
       }
     }
 
-    // 9. Eventos de fondo
+    // eventos random
     if (s.modo === 'autonomo' && s.vel > 0.1 && Math.random() < 0.07) {
       s.wp = (s.wp + 1) % WAYPOINTS.length;
       evento('NAV', 'Navegación', `Waypoint alcanzado: ${WAYPOINTS[s.wp]}`);
@@ -216,7 +208,7 @@ const HavvaSim = (function () {
         s.distUmbral = c.distancia;
         break;
     }
-    emitir(); // la interfaz refleja el comando sin esperar al siguiente segundo
+    emitir(); // para que el cambio se vea al instante
   }
 
   function iniciar() {
@@ -232,8 +224,8 @@ const HavvaSim = (function () {
     pausado = true;
   }
 
-  /* Fuente real: un ESP32 o un puente rosbridge que mande JSON con la misma
-     forma que paquete(). Ejemplo: HavvaSim.conectarWebSocket('ws://192.168.4.1:81') */
+  // para conectar el robot real (esp32 o rosbridge) mandando el mismo json
+  // ej: HavvaSim.conectarWebSocket('ws://192.168.4.1:81')
   function conectarWebSocket(url) {
     pausar();
     fuente = 'websocket';

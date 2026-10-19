@@ -2,318 +2,368 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Havva Telemetría</title>
-  <meta name="description" content="Panel de telemetría del robot de servicio Havva (RoboCup @Home Beginners, Universidad de Montemorelos) construido con Bootstrap y jQuery.">
 
-  <!-- Tipografías -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-
-  <!-- Bootstrap 5 (base de la Unidad 1) -->
+  <!-- bootstrap -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
-  <!-- DataTables con estilos de Bootstrap 5 (plugin, Fase 3) -->
+  <!-- datatables -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/datatables.net-bs5@2.1.8/css/dataTables.bootstrap5.min.css" data-fase="3">
 
   <link rel="stylesheet" href="css/estilos.css">
 </head>
-<body>
+<body class="bg-body-tertiary">
 
-<header class="barra">
-  <div class="contenedor barra-interior">
-    <div class="marca">
-      <span class="marca-robot">HAVVA</span>
-      <span class="marca-sub">Telemetría · RoboCup @Home Beginners · UM</span>
+  <!-- navbar -->
+  <nav class="navbar bg-body border-bottom sticky-top">
+    <div class="container-fluid">
+      <span class="navbar-brand fw-bold">Havva <small class="text-body-secondary fw-normal fs-6">Telemetría · RoboCup @Home</small></span>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <span id="pill-conexion" class="badge text-bg-success">Simulación · 1 Hz</span>
+        <small class="text-body-secondary">Último paquete <span id="txt-ultimo" class="font-monospace">—</span></small>
+        <button id="btn-pausa" class="btn btn-outline-secondary btn-sm" type="button">Pausar datos</button>
+      </div>
     </div>
-    <div class="barra-estado">
-      <span id="pill-conexion" class="pill pill-ok"><span class="punto" aria-hidden="true"></span><span id="txt-conexion">Simulación acelerada · 1 Hz</span></span>
-      <span class="ultimo">Último paquete <span id="txt-ultimo" class="mono">—</span></span>
-      <button id="btn-pausa" class="btn btn-sm btn-contorno" type="button">Pausar datos</button>
-    </div>
-  </div>
-</header>
+  </nav>
 
-<main class="contenedor principal">
+  <main class="container-fluid py-3">
 
-  <div id="banner-paro" class="banner banner-paro" role="alert" style="display:none">
-    <p><strong>Paro de emergencia activo.</strong> Motores sin energía y controles bloqueados.</p>
-    <button id="btn-reanudar" class="btn btn-sm btn-claro" type="button">Reanudar operación</button>
-  </div>
-
-  <div id="alerta-bateria" class="banner banner-aviso" role="alert" style="display:none">
-    <p><strong>Batería baja: <span id="alerta-bat-pct">19</span>%.</strong> Envía a Havva a la base de carga antes de que se detenga.</p>
-    <div class="banner-acciones">
-      <button id="btn-ir-base" class="btn btn-sm btn-claro" type="button">Regresar a base</button>
-      <button id="btn-cerrar-alerta" class="btn-cerrar" type="button" aria-label="Cerrar aviso">×</button>
-    </div>
-  </div>
-
-  <div class="row g-3">
-    <!-- Columna principal -->
-    <div class="col-lg-8 d-flex flex-column gap-3 columna">
-
-      <section class="resumen" aria-label="Resumen">
-        <div class="bloque estado-ok" id="estado-general">
-          <p class="etiqueta">Estado</p>
-          <p class="estado-linea">
-            <span id="chip-estado" class="chip chip-ok">EN RUTA</span>
-            <span id="txt-estado">Navegando entre waypoints</span>
-          </p>
-          <dl class="mini">
-            <div><dt>Modo</dt><dd id="txt-modo">Autónomo</dd></div>
-            <div><dt>Motores</dt><dd id="txt-motores">Izq ON · Der ON</dd></div>
-            <div class="ancho"><dt>Odometría</dt><dd id="txt-pos" class="mono">x 0.00 m · y 0.00 m · θ 0°</dd></div>
-          </dl>
-        </div>
-
-        <div class="bloque estado-aviso" id="tarjeta-bateria">
-          <p class="etiqueta">Batería</p>
-          <p class="bat-num"><span id="bat-pct">24</span><span class="u">%</span></p>
-          <div class="bat-pista" aria-hidden="true">
-            <div id="bat-barra" class="bat-barra" style="width:24%"></div>
-            <span id="bat-marca" class="bat-marca" style="left:20%" title="Umbral de alerta"></span>
-          </div>
-          <dl class="mini">
-            <div><dt>Voltaje</dt><dd id="bat-voltaje" class="mono">22.0 V</dd></div>
-            <div><dt>Autonomía</dt><dd id="bat-autonomia" class="mono">≈ 5 min</dd></div>
-          </dl>
-        </div>
-      </section>
-
-      <section id="zona-fijados" class="panel panel-fijados" style="display:none" aria-label="Tarjetas fijadas">
-        <div class="panel-cab">
-          <h2>Vigilando</h2>
-          <p class="nota">Copias de las tarjetas que fijaste. Se actualizan igual que las originales.</p>
-        </div>
-        <div id="fijados-lista" class="rejilla-sensores"></div>
-      </section>
-
-      <section class="panel" aria-labelledby="t-sensores">
-        <div class="panel-cab">
-          <h2 id="t-sensores">Sensores</h2>
-          <p class="nota">Arrastra una tarjeta por su título para reordenar. Pasa el cursor para ver mínimo, máximo y promedio.</p>
-          <button id="btn-restaurar" class="btn btn-sm btn-contorno" type="button" style="display:none">Mostrar ocultas (<span class="n">0</span>)</button>
-        </div>
-
-        <div id="panel-sensores" class="rejilla-sensores">
-
-          <article class="tarjeta-sensor estado-ok" data-sensor="lidar" tabindex="0">
-            <header class="ts-cab">
-              <h3 class="ts-nombre">LiDAR frontal</h3>
-              <div class="ts-acciones">
-                <button class="ts-btn" type="button" data-accion="fijar" aria-label="Fijar LiDAR frontal">Fijar</button>
-                <button class="ts-btn" type="button" data-accion="colapsar" aria-expanded="true" aria-label="Colapsar">−</button>
-                <button class="ts-btn" type="button" data-accion="ocultar" aria-label="Ocultar">×</button>
-              </div>
-            </header>
-            <div class="ts-cuerpo">
-              <p class="ts-lectura"><span class="valor">1.84</span><span class="unidad">m</span></p>
-              <svg class="spark" viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true"><polyline points=""></polyline></svg>
-              <p class="ts-estado"><span class="chip">Normal</span><span class="ts-desc">Distancia al obstáculo más cercano</span></p>
-              <dl class="rango" style="display:none"><div><dt>Mín</dt><dd class="r-min">—</dd></div><div><dt>Máx</dt><dd class="r-max">—</dd></div><div><dt>Prom</dt><dd class="r-prom">—</dd></div></dl>
-            </div>
-          </article>
-
-          <article class="tarjeta-sensor estado-ok" data-sensor="ultra" tabindex="0">
-            <header class="ts-cab">
-              <h3 class="ts-nombre">Ultrasónico trasero</h3>
-              <div class="ts-acciones">
-                <button class="ts-btn" type="button" data-accion="fijar" aria-label="Fijar Ultrasónico trasero">Fijar</button>
-                <button class="ts-btn" type="button" data-accion="colapsar" aria-expanded="true" aria-label="Colapsar">−</button>
-                <button class="ts-btn" type="button" data-accion="ocultar" aria-label="Ocultar">×</button>
-              </div>
-            </header>
-            <div class="ts-cuerpo">
-              <p class="ts-lectura"><span class="valor">118</span><span class="unidad">cm</span></p>
-              <svg class="spark" viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true"><polyline points=""></polyline></svg>
-              <p class="ts-estado"><span class="chip">Normal</span><span class="ts-desc">Espacio libre detrás del robot</span></p>
-              <dl class="rango" style="display:none"><div><dt>Mín</dt><dd class="r-min">—</dd></div><div><dt>Máx</dt><dd class="r-max">—</dd></div><div><dt>Prom</dt><dd class="r-prom">—</dd></div></dl>
-            </div>
-          </article>
-
-          <article class="tarjeta-sensor estado-ok" data-sensor="vel" tabindex="0">
-            <header class="ts-cab">
-              <h3 class="ts-nombre">Velocidad lineal</h3>
-              <div class="ts-acciones">
-                <button class="ts-btn" type="button" data-accion="fijar" aria-label="Fijar Velocidad lineal">Fijar</button>
-                <button class="ts-btn" type="button" data-accion="colapsar" aria-expanded="true" aria-label="Colapsar">−</button>
-                <button class="ts-btn" type="button" data-accion="ocultar" aria-label="Ocultar">×</button>
-              </div>
-            </header>
-            <div class="ts-cuerpo">
-              <p class="ts-lectura"><span class="valor">0.32</span><span class="unidad">m/s</span></p>
-              <svg class="spark" viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true"><polyline points=""></polyline></svg>
-              <p class="ts-estado"><span class="chip">Normal</span><span class="ts-desc">Calculada por odometría de ruedas</span></p>
-              <dl class="rango" style="display:none"><div><dt>Mín</dt><dd class="r-min">—</dd></div><div><dt>Máx</dt><dd class="r-max">—</dd></div><div><dt>Prom</dt><dd class="r-prom">—</dd></div></dl>
-            </div>
-          </article>
-
-          <article class="tarjeta-sensor estado-ok" data-sensor="temp-izq" tabindex="0">
-            <header class="ts-cab">
-              <h3 class="ts-nombre">Motor izquierdo</h3>
-              <div class="ts-acciones">
-                <button class="ts-btn" type="button" data-accion="fijar" aria-label="Fijar Motor izquierdo">Fijar</button>
-                <button class="ts-btn" type="button" data-accion="colapsar" aria-expanded="true" aria-label="Colapsar">−</button>
-                <button class="ts-btn" type="button" data-accion="ocultar" aria-label="Ocultar">×</button>
-              </div>
-            </header>
-            <div class="ts-cuerpo">
-              <p class="ts-lectura"><span class="valor">41.5</span><span class="unidad">°C</span></p>
-              <svg class="spark" viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true"><polyline points=""></polyline></svg>
-              <p class="ts-estado"><span class="chip">Normal</span><span class="ts-desc">Temperatura de la carcasa</span></p>
-              <dl class="rango" style="display:none"><div><dt>Mín</dt><dd class="r-min">—</dd></div><div><dt>Máx</dt><dd class="r-max">—</dd></div><div><dt>Prom</dt><dd class="r-prom">—</dd></div></dl>
-            </div>
-          </article>
-
-          <article class="tarjeta-sensor estado-ok" data-sensor="temp-der" tabindex="0">
-            <header class="ts-cab">
-              <h3 class="ts-nombre">Motor derecho</h3>
-              <div class="ts-acciones">
-                <button class="ts-btn" type="button" data-accion="fijar" aria-label="Fijar Motor derecho">Fijar</button>
-                <button class="ts-btn" type="button" data-accion="colapsar" aria-expanded="true" aria-label="Colapsar">−</button>
-                <button class="ts-btn" type="button" data-accion="ocultar" aria-label="Ocultar">×</button>
-              </div>
-            </header>
-            <div class="ts-cuerpo">
-              <p class="ts-lectura"><span class="valor">43.0</span><span class="unidad">°C</span></p>
-              <svg class="spark" viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true"><polyline points=""></polyline></svg>
-              <p class="ts-estado"><span class="chip">Normal</span><span class="ts-desc">Temperatura de la carcasa</span></p>
-              <dl class="rango" style="display:none"><div><dt>Mín</dt><dd class="r-min">—</dd></div><div><dt>Máx</dt><dd class="r-max">—</dd></div><div><dt>Prom</dt><dd class="r-prom">—</dd></div></dl>
-            </div>
-          </article>
-
-          <article class="tarjeta-sensor estado-ok" data-sensor="cpu" tabindex="0">
-            <header class="ts-cab">
-              <h3 class="ts-nombre">CPU de a bordo</h3>
-              <div class="ts-acciones">
-                <button class="ts-btn" type="button" data-accion="fijar" aria-label="Fijar CPU de a bordo">Fijar</button>
-                <button class="ts-btn" type="button" data-accion="colapsar" aria-expanded="true" aria-label="Colapsar">−</button>
-                <button class="ts-btn" type="button" data-accion="ocultar" aria-label="Ocultar">×</button>
-              </div>
-            </header>
-            <div class="ts-cuerpo">
-              <p class="ts-lectura"><span class="valor">57.0</span><span class="unidad">°C</span></p>
-              <svg class="spark" viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true"><polyline points=""></polyline></svg>
-              <p class="ts-estado"><span class="chip">Normal</span><span class="ts-desc">Computadora que corre ROS 2</span></p>
-              <dl class="rango" style="display:none"><div><dt>Mín</dt><dd class="r-min">—</dd></div><div><dt>Máx</dt><dd class="r-max">—</dd></div><div><dt>Prom</dt><dd class="r-prom">—</dd></div></dl>
-            </div>
-          </article>
-
-        </div>
-      </section>
-
-      <section class="panel" id="registro" aria-labelledby="t-registro">
-        <div class="panel-cab">
-          <h2 id="t-registro">Registro de eventos</h2>
-          <span id="reg-total" class="nota mono">5 eventos</span>
-        </div>
-        <div class="reg-filtros">
-          <fieldset class="tipos">
-            <legend class="visually-hidden">Tipos de evento visibles</legend>
-            <label class="filtro"><input class="filtro-tipo" type="checkbox" value="INFO" checked> <span class="chip chip-info">INFO</span></label>
-            <label class="filtro"><input class="filtro-tipo" type="checkbox" value="NAV" checked> <span class="chip chip-nav">NAV</span></label>
-            <label class="filtro"><input class="filtro-tipo" type="checkbox" value="AVISO" checked> <span class="chip chip-aviso">AVISO</span></label>
-            <label class="filtro"><input class="filtro-tipo" type="checkbox" value="ERROR" checked> <span class="chip chip-error">ERROR</span></label>
-          </fieldset>
-          <div class="reg-busqueda">
-            <label for="buscar-registro" class="visually-hidden">Buscar en el registro</label>
-            <input id="buscar-registro" type="search" class="form-control form-control-sm" placeholder="Buscar: obstáculo, IMU, cocina…">
-            <button id="btn-limpiar" class="btn btn-sm btn-contorno" type="button">Limpiar</button>
-          </div>
-        </div>
-        <div class="tabla-envoltura">
-          <table id="tabla-registro" class="table table-sm tabla-registro">
-            <thead><tr><th>Hora</th><th>Tipo</th><th>Fuente</th><th>Mensaje</th></tr></thead>
-            <tbody>
-              <tr><td class="mono">09:14:05</td><td><span class="chip chip-info">INFO</span></td><td>Sistema</td><td>Havva encendido, nodos de ROS 2 activos</td></tr>
-              <tr><td class="mono">09:14:12</td><td><span class="chip chip-nav">NAV</span></td><td>Navegación</td><td>Mapa de la arena cargado</td></tr>
-              <tr><td class="mono">09:15:40</td><td><span class="chip chip-nav">NAV</span></td><td>Navegación</td><td>Waypoint alcanzado: cocina</td></tr>
-              <tr><td class="mono">09:16:02</td><td><span class="chip chip-aviso">AVISO</span></td><td>Batería</td><td>Nivel por debajo de 30%</td></tr>
-              <tr><td class="mono">09:16:31</td><td><span class="chip chip-error">ERROR</span></td><td>IMU</td><td>Lectura de IMU fuera de rango: se descartó el paquete</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+    <!-- alertas -->
+    <div id="banner-paro" style="display: none">
+      <div class="alert alert-danger d-flex justify-content-between align-items-center" role="alert">
+        <span><strong>Paro de emergencia activo.</strong> Motores sin energía y controles bloqueados.</span>
+        <button id="btn-reanudar" class="btn btn-light btn-sm" type="button">Reanudar</button>
+      </div>
     </div>
 
-    <!-- Columna lateral -->
-    <aside class="col-lg-4 d-flex flex-column gap-3 columna">
-      <section class="panel" id="controles" aria-labelledby="t-controles">
-        <div class="panel-cab"><h2 id="t-controles">Actuadores</h2></div>
+    <div id="alerta-bateria" style="display: none">
+      <div class="alert alert-warning d-flex justify-content-between align-items-center" role="alert">
+        <span><strong>Batería baja: <span id="alerta-bat-pct">19</span>%.</strong> Manda a Havva a cargar.</span>
+        <div class="d-flex align-items-center gap-2">
+          <button id="btn-ir-base" class="btn btn-warning btn-sm" type="button">Regresar a base</button>
+          <button id="btn-cerrar-alerta" type="button" class="btn-close" aria-label="Cerrar"></button>
+        </div>
+      </div>
+    </div>
 
-        <div class="grupo">
-          <div class="form-check form-switch interruptor">
-            <input class="form-check-input" type="checkbox" role="switch" id="sw-motor-izq" data-lado="izq" checked>
-            <label class="form-check-label" for="sw-motor-izq">Motor izquierdo <span class="estado-sw mono">ON</span></label>
+    <div class="row g-3">
+
+      <!-- columna principal -->
+      <div class="col-lg-8">
+
+        <!-- estado y bateria -->
+        <div class="row g-3 mb-3">
+          <div class="col-md-7">
+            <div id="estado-general" class="card h-100">
+              <div class="card-body">
+                <h6 class="card-subtitle text-body-secondary mb-2">Estado</h6>
+                <h4 class="card-title">
+                  <span id="chip-estado" class="badge text-bg-success align-middle">EN RUTA</span>
+                  <span id="txt-estado" class="align-middle">Navegando entre waypoints</span>
+                </h4>
+                <ul class="list-unstyled small mb-0">
+                  <li>Modo: <strong id="txt-modo">Autónomo</strong></li>
+                  <li>Motores: <strong id="txt-motores">Izq ON · Der ON</strong></li>
+                  <li>Odometría: <span id="txt-pos" class="font-monospace">x 0.00 m · y 0.00 m · θ 0°</span></li>
+                </ul>
+              </div>
+            </div>
           </div>
-          <div class="form-check form-switch interruptor">
-            <input class="form-check-input" type="checkbox" role="switch" id="sw-motor-der" data-lado="der" checked>
-            <label class="form-check-label" for="sw-motor-der">Motor derecho <span class="estado-sw mono">ON</span></label>
+
+          <div class="col-md-5">
+            <div id="tarjeta-bateria" class="card h-100">
+              <div class="card-body">
+                <h6 class="card-subtitle text-body-secondary mb-2">Batería</h6>
+                <p class="fs-1 fw-bold mb-2"><span id="bat-pct">24</span>%</p>
+                <div class="progress mb-2" role="progressbar" aria-label="Nivel de batería">
+                  <div id="bat-barra" class="progress-bar bg-warning" style="width: 24%"></div>
+                </div>
+                <small class="text-body-secondary">
+                  <span id="bat-voltaje" class="font-monospace">22.0 V</span> ·
+                  <span id="bat-autonomia">≈ 5 min</span> ·
+                  aviso en <span id="bat-umbral">20</span>%
+                </small>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="grupo">
-          <label for="sel-modo" class="form-label">Modo de navegación</label>
-          <select id="sel-modo" class="form-select">
-            <option value="autonomo" selected>Autónomo (recorre waypoints)</option>
-            <option value="manual">Manual (teleoperación)</option>
-            <option value="base">Regreso a base de carga</option>
-          </select>
+        <!-- tarjetas fijadas -->
+        <div id="zona-fijados" class="card mb-3" style="display: none">
+          <div class="card-header">Vigilando</div>
+          <div class="card-body">
+            <div id="fijados-lista" class="row row-cols-1 row-cols-sm-2 row-cols-xl-3 g-3"></div>
+          </div>
         </div>
 
-        <div class="grupo">
-          <label for="rng-vel" class="form-label d-flex justify-content-between">Velocidad máxima <output id="txt-vel" for="rng-vel" class="mono">0.50 m/s</output></label>
-          <input type="range" class="form-range" id="rng-vel" min="0.1" max="0.8" step="0.05" value="0.5">
-          <div class="escala mono" aria-hidden="true"><span>0.10</span><span>0.80 m/s</span></div>
+        <!-- sensores -->
+        <div class="card mb-3">
+          <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span>Sensores <small class="text-body-secondary">(arrastra el título para reordenar)</small></span>
+            <button id="btn-restaurar" class="btn btn-outline-secondary btn-sm" type="button" style="display: none">Mostrar ocultas (<span class="n">0</span>)</button>
+          </div>
+          <div class="card-body">
+            <div id="panel-sensores" class="row row-cols-1 row-cols-sm-2 row-cols-xl-3 g-3">
+
+              <div class="col tarjeta-sensor" data-sensor="lidar">
+                <div class="card h-100">
+                  <div class="card-header d-flex justify-content-between align-items-center">
+                    <span class="ts-nombre small fw-semibold">LiDAR frontal</span>
+                    <div class="btn-group btn-group-sm">
+                      <button class="btn btn-outline-secondary" type="button" data-accion="fijar">Fijar</button>
+                      <button class="btn btn-outline-secondary" type="button" data-accion="colapsar">−</button>
+                      <button class="btn btn-outline-secondary" type="button" data-accion="ocultar">×</button>
+                    </div>
+                  </div>
+                  <div class="card-body" tabindex="0">
+                    <p class="fs-3 font-monospace mb-1"><span class="valor">1.84</span> <small class="fs-6 text-body-secondary">m</small></p>
+                    <svg class="spark text-primary" viewBox="0 0 120 32" preserveAspectRatio="none"><polyline points=""></polyline></svg>
+                    <span class="badge text-bg-success estado-badge">Normal</span>
+                    <small class="text-body-secondary">Obstáculo más cercano</small>
+                    <div class="rango small text-body-secondary mt-2" style="display: none">
+                      Mín <span class="r-min">—</span> · Máx <span class="r-max">—</span> · Prom <span class="r-prom">—</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col tarjeta-sensor" data-sensor="ultra">
+                <div class="card h-100">
+                  <div class="card-header d-flex justify-content-between align-items-center">
+                    <span class="ts-nombre small fw-semibold">Ultrasónico trasero</span>
+                    <div class="btn-group btn-group-sm">
+                      <button class="btn btn-outline-secondary" type="button" data-accion="fijar">Fijar</button>
+                      <button class="btn btn-outline-secondary" type="button" data-accion="colapsar">−</button>
+                      <button class="btn btn-outline-secondary" type="button" data-accion="ocultar">×</button>
+                    </div>
+                  </div>
+                  <div class="card-body" tabindex="0">
+                    <p class="fs-3 font-monospace mb-1"><span class="valor">118</span> <small class="fs-6 text-body-secondary">cm</small></p>
+                    <svg class="spark text-primary" viewBox="0 0 120 32" preserveAspectRatio="none"><polyline points=""></polyline></svg>
+                    <span class="badge text-bg-success estado-badge">Normal</span>
+                    <small class="text-body-secondary">Espacio libre atrás</small>
+                    <div class="rango small text-body-secondary mt-2" style="display: none">
+                      Mín <span class="r-min">—</span> · Máx <span class="r-max">—</span> · Prom <span class="r-prom">—</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col tarjeta-sensor" data-sensor="vel">
+                <div class="card h-100">
+                  <div class="card-header d-flex justify-content-between align-items-center">
+                    <span class="ts-nombre small fw-semibold">Velocidad</span>
+                    <div class="btn-group btn-group-sm">
+                      <button class="btn btn-outline-secondary" type="button" data-accion="fijar">Fijar</button>
+                      <button class="btn btn-outline-secondary" type="button" data-accion="colapsar">−</button>
+                      <button class="btn btn-outline-secondary" type="button" data-accion="ocultar">×</button>
+                    </div>
+                  </div>
+                  <div class="card-body" tabindex="0">
+                    <p class="fs-3 font-monospace mb-1"><span class="valor">0.32</span> <small class="fs-6 text-body-secondary">m/s</small></p>
+                    <svg class="spark text-primary" viewBox="0 0 120 32" preserveAspectRatio="none"><polyline points=""></polyline></svg>
+                    <span class="badge text-bg-success estado-badge">Normal</span>
+                    <small class="text-body-secondary">Por odometría</small>
+                    <div class="rango small text-body-secondary mt-2" style="display: none">
+                      Mín <span class="r-min">—</span> · Máx <span class="r-max">—</span> · Prom <span class="r-prom">—</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col tarjeta-sensor" data-sensor="temp-izq">
+                <div class="card h-100">
+                  <div class="card-header d-flex justify-content-between align-items-center">
+                    <span class="ts-nombre small fw-semibold">Motor izquierdo</span>
+                    <div class="btn-group btn-group-sm">
+                      <button class="btn btn-outline-secondary" type="button" data-accion="fijar">Fijar</button>
+                      <button class="btn btn-outline-secondary" type="button" data-accion="colapsar">−</button>
+                      <button class="btn btn-outline-secondary" type="button" data-accion="ocultar">×</button>
+                    </div>
+                  </div>
+                  <div class="card-body" tabindex="0">
+                    <p class="fs-3 font-monospace mb-1"><span class="valor">41.5</span> <small class="fs-6 text-body-secondary">°C</small></p>
+                    <svg class="spark text-primary" viewBox="0 0 120 32" preserveAspectRatio="none"><polyline points=""></polyline></svg>
+                    <span class="badge text-bg-success estado-badge">Normal</span>
+                    <small class="text-body-secondary">Temperatura</small>
+                    <div class="rango small text-body-secondary mt-2" style="display: none">
+                      Mín <span class="r-min">—</span> · Máx <span class="r-max">—</span> · Prom <span class="r-prom">—</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col tarjeta-sensor" data-sensor="temp-der">
+                <div class="card h-100">
+                  <div class="card-header d-flex justify-content-between align-items-center">
+                    <span class="ts-nombre small fw-semibold">Motor derecho</span>
+                    <div class="btn-group btn-group-sm">
+                      <button class="btn btn-outline-secondary" type="button" data-accion="fijar">Fijar</button>
+                      <button class="btn btn-outline-secondary" type="button" data-accion="colapsar">−</button>
+                      <button class="btn btn-outline-secondary" type="button" data-accion="ocultar">×</button>
+                    </div>
+                  </div>
+                  <div class="card-body" tabindex="0">
+                    <p class="fs-3 font-monospace mb-1"><span class="valor">43.0</span> <small class="fs-6 text-body-secondary">°C</small></p>
+                    <svg class="spark text-primary" viewBox="0 0 120 32" preserveAspectRatio="none"><polyline points=""></polyline></svg>
+                    <span class="badge text-bg-success estado-badge">Normal</span>
+                    <small class="text-body-secondary">Temperatura</small>
+                    <div class="rango small text-body-secondary mt-2" style="display: none">
+                      Mín <span class="r-min">—</span> · Máx <span class="r-max">—</span> · Prom <span class="r-prom">—</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col tarjeta-sensor" data-sensor="cpu">
+                <div class="card h-100">
+                  <div class="card-header d-flex justify-content-between align-items-center">
+                    <span class="ts-nombre small fw-semibold">CPU</span>
+                    <div class="btn-group btn-group-sm">
+                      <button class="btn btn-outline-secondary" type="button" data-accion="fijar">Fijar</button>
+                      <button class="btn btn-outline-secondary" type="button" data-accion="colapsar">−</button>
+                      <button class="btn btn-outline-secondary" type="button" data-accion="ocultar">×</button>
+                    </div>
+                  </div>
+                  <div class="card-body" tabindex="0">
+                    <p class="fs-3 font-monospace mb-1"><span class="valor">57.0</span> <small class="fs-6 text-body-secondary">°C</small></p>
+                    <svg class="spark text-primary" viewBox="0 0 120 32" preserveAspectRatio="none"><polyline points=""></polyline></svg>
+                    <span class="badge text-bg-success estado-badge">Normal</span>
+                    <small class="text-body-secondary">Computadora con ROS 2</small>
+                    <div class="rango small text-body-secondary mt-2" style="display: none">
+                      Mín <span class="r-min">—</span> · Máx <span class="r-max">—</span> · Prom <span class="r-prom">—</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
         </div>
 
-        <button id="btn-paro" class="btn btn-paro" type="button">Paro de emergencia</button>
-        <p id="txt-paro-ayuda" class="nota ayuda-paro">Corta la energía de ambos motores.</p>
-      </section>
-
-      <section class="panel" id="umbrales" aria-labelledby="t-umbrales">
-        <div class="panel-cab">
-          <h2 id="t-umbrales">Umbrales de alerta</h2>
-          <p class="nota">Cuándo una lectura pasa a «Atención» o «Crítico».</p>
+        <!-- registro -->
+        <div id="registro" class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Registro de eventos</span>
+            <span id="reg-total" class="badge text-bg-secondary">0 eventos</span>
+          </div>
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+              <div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input filtro-tipo" type="checkbox" id="f-info" value="INFO" checked>
+                  <label class="form-check-label" for="f-info"><span class="badge text-bg-secondary">INFO</span></label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input filtro-tipo" type="checkbox" id="f-nav" value="NAV" checked>
+                  <label class="form-check-label" for="f-nav"><span class="badge text-bg-primary">NAV</span></label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input filtro-tipo" type="checkbox" id="f-aviso" value="AVISO" checked>
+                  <label class="form-check-label" for="f-aviso"><span class="badge text-bg-warning">AVISO</span></label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input filtro-tipo" type="checkbox" id="f-error" value="ERROR" checked>
+                  <label class="form-check-label" for="f-error"><span class="badge text-bg-danger">ERROR</span></label>
+                </div>
+              </div>
+              <div class="input-group input-group-sm" style="max-width: 320px">
+                <input id="buscar-registro" type="search" class="form-control" placeholder="Buscar: obstáculo, IMU, cocina…" aria-label="Buscar en el registro">
+                <button id="btn-limpiar" class="btn btn-outline-secondary" type="button">Limpiar</button>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table id="tabla-registro" class="table table-sm table-hover align-middle mb-0">
+                <thead><tr><th>Hora</th><th>Tipo</th><th>Fuente</th><th>Mensaje</th></tr></thead>
+                <tbody>
+                  <tr><td>09:14:05</td><td><span class="badge text-bg-secondary">INFO</span></td><td>Sistema</td><td>Havva encendido</td></tr>
+                  <tr><td>09:15:40</td><td><span class="badge text-bg-primary">NAV</span></td><td>Navegación</td><td>Waypoint alcanzado: cocina</td></tr>
+                  <tr><td>09:16:31</td><td><span class="badge text-bg-danger">ERROR</span></td><td>IMU</td><td>Lectura fuera de rango</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-        <form id="form-umbrales" novalidate>
-          <div class="campo">
-            <label for="in-dist" class="form-label">Distancia mínima a obstáculos (m)</label>
-            <input id="in-dist" name="distancia" class="form-control mono" type="number" inputmode="decimal" step="0.05" min="0.2" max="2" value="0.45">
-          </div>
-          <div class="campo">
-            <label for="in-temp" class="form-label">Temperatura máxima de motores y CPU (°C)</label>
-            <input id="in-temp" name="temp" class="form-control mono" type="number" inputmode="numeric" step="1" min="40" max="90" value="70">
-          </div>
-          <div class="campo">
-            <label for="in-bat" class="form-label">Batería para avisar regreso (%)</label>
-            <input id="in-bat" name="bateria" class="form-control mono" type="number" inputmode="numeric" step="1" min="5" max="50" value="20">
-          </div>
-          <button type="submit" class="btn btn-acento">Guardar umbrales</button>
-        </form>
-      </section>
-    </aside>
-  </div>
-</main>
+      </div>
 
-<footer class="contenedor pie">
-  <p>Técnicas para el Desarrollo de Frontend · Unidad 2 · Universidad de Montemorelos · jQuery <span id="ver-jquery" class="mono">—</span></p>
-</footer>
+      <!-- columna lateral -->
+      <div class="col-lg-4">
 
-<div id="toasts" class="toasts" aria-live="polite"></div>
+        <!-- controles -->
+        <div id="controles" class="card mb-3">
+          <div class="card-header">Actuadores</div>
+          <div class="card-body">
+            <div class="form-check form-switch mb-2">
+              <input class="form-check-input" type="checkbox" role="switch" id="sw-motor-izq" data-lado="izq" checked>
+              <label class="form-check-label" for="sw-motor-izq">Motor izquierdo <span class="estado-sw badge text-bg-success">ON</span></label>
+            </div>
+            <div class="form-check form-switch mb-3">
+              <input class="form-check-input" type="checkbox" role="switch" id="sw-motor-der" data-lado="der" checked>
+              <label class="form-check-label" for="sw-motor-der">Motor derecho <span class="estado-sw badge text-bg-success">ON</span></label>
+            </div>
 
-<!-- jQuery desde CDN (Fase 1) -->
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<!-- Plugins (Fase 3) -->
-<script src="https://code.jquery.com/ui/1.13.3/jquery-ui.min.js" data-fase="3"></script>
-<script src="https://cdn.jsdelivr.net/npm/datatables.net@2.1.8/js/dataTables.min.js" data-fase="3"></script>
-<script src="https://cdn.jsdelivr.net/npm/datatables.net-bs5@2.1.8/js/dataTables.bootstrap5.min.js" data-fase="3"></script>
-<!-- Código propio -->
-<script src="js/inicio.js"></script>
-<script src="js/simulador.js" data-fase="2"></script>
-<script src="js/panel.js" data-fase="2"></script>
-<script src="js/registro.js" data-fase="3"></script>
-<script src="js/tarjetas.js" data-fase="3"></script>
+            <div class="mb-3">
+              <label for="sel-modo" class="form-label">Modo de navegación</label>
+              <select id="sel-modo" class="form-select">
+                <option value="autonomo" selected>Autónomo</option>
+                <option value="manual">Manual</option>
+                <option value="base">Regreso a base</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="rng-vel" class="form-label">Velocidad máxima: <span id="txt-vel" class="font-monospace">0.50 m/s</span></label>
+              <input type="range" class="form-range" id="rng-vel" min="0.1" max="0.8" step="0.05" value="0.5">
+            </div>
+
+            <button id="btn-paro" class="btn btn-danger btn-lg w-100" type="button">PARO DE EMERGENCIA</button>
+            <div id="txt-paro-ayuda" class="form-text text-center">Corta la energía de ambos motores.</div>
+          </div>
+        </div>
+
+        <!-- umbrales -->
+        <div class="card">
+          <div class="card-header">Umbrales de alerta</div>
+          <div class="card-body">
+            <form id="form-umbrales" novalidate>
+              <div class="mb-3">
+                <label for="in-dist" class="form-label">Distancia mínima a obstáculos (m)</label>
+                <input id="in-dist" class="form-control" type="number" step="0.05" min="0.2" max="2" value="0.45">
+              </div>
+              <div class="mb-3">
+                <label for="in-temp" class="form-label">Temperatura máxima (°C)</label>
+                <input id="in-temp" class="form-control" type="number" step="1" min="40" max="90" value="70">
+              </div>
+              <div class="mb-3">
+                <label for="in-bat" class="form-label">Avisar con batería en (%)</label>
+                <input id="in-bat" class="form-control" type="number" step="1" min="5" max="50" value="20">
+              </div>
+              <button type="submit" class="btn btn-primary">Guardar umbrales</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="container-fluid pb-3 small text-body-secondary">
+    Técnicas para el Desarrollo de Frontend · Unidad 2 · Universidad de Montemorelos · jQuery <span id="ver-jquery">—</span>
+  </footer>
+
+  <!-- toasts -->
+  <div id="toasts" class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+
+  <!-- jquery -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <!-- plugins -->
+  <script src="https://code.jquery.com/ui/1.13.3/jquery-ui.min.js" data-fase="3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/datatables.net@2.1.8/js/dataTables.min.js" data-fase="3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/datatables.net-bs5@2.1.8/js/dataTables.bootstrap5.min.js" data-fase="3"></script>
+  <!-- mis scripts -->
+  <script src="js/inicio.js"></script>
+  <script src="js/simulador.js" data-fase="2"></script>
+  <script src="js/panel.js" data-fase="2"></script>
+  <script src="js/registro.js" data-fase="3"></script>
+  <script src="js/tarjetas.js" data-fase="3"></script>
 </body>
 </html>

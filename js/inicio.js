@@ -1,5 +1,4 @@
-/* Fase 1 — Carga de jQuery y función factoría $()
-   Si jQuery cargó desde el CDN, $ es una función y $.fn.jquery trae la versión. */
+// fase 1: checar que jquery cargo (pone la version en el footer)
 $(function () {
   $('#ver-jquery').text($.fn.jquery);
 });

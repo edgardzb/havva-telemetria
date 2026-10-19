@@ -28,7 +28,7 @@ python3 -m http.server 8000
 
 ```
 index.html          Estructura Bootstrap (base estática) y carga de librerías por CDN
-css/estilos.css     Tokens de color y tipografía, tema claro/oscuro, estilos de componentes
+css/estilos.css     Lo poco que Bootstrap no trae (gráficas de sensores, arrastre, tabla)
 js/inicio.js        Fase 1: comprobación de jQuery y función factoría $()
 js/simulador.js     Fuente de datos simulada (JavaScript puro, sin jQuery)
 js/panel.js         Fase 2: sensores en vivo, batería, estado y actuadores
@@ -42,7 +42,7 @@ Cada `<script>` en `index.html` tiene un atributo `data-fase` que indica en qué
 
 | Librería | Versión | Para qué |
 | --- | --- | --- |
-| Bootstrap | 5.3.3 | Rejilla, formularios y estilos base (Unidad 1) |
+| Bootstrap | 5.3.3 | Toda la interfaz: navbar, cards, alerts, badges, progress, forms, table, toasts y rejilla |
 | jQuery | 3.7.1 | Selectores, eventos, efectos y manipulación del DOM |
 | DataTables (+ integración Bootstrap 5) | 2.1.8 | Registro de eventos con orden, paginación y búsqueda |
 | jQuery UI (Sortable) | 1.13.3 | Reordenar tarjetas arrastrando |
@@ -52,7 +52,7 @@ Cada `<script>` en `index.html` tiene un atributo `data-fase` que indica en qué
 | Requisito | Dónde |
 | --- | --- |
 | 5 tipos de selectores | `#id` (`$('#bat-barra')`), `.clase` (`$('.filtro-tipo')`), elemento (`$('body')`), atributo (`$('[data-sensor="lidar"]')`), pseudo (`$('#controles :input')`, `:checked`, `:hidden`, `option:selected`) |
-| `.css()` y clases | `.css('left', …)` en el marcador de batería; `.addClass/.removeClass` en estados; `.toggleClass('modo-paro')` |
+| `.css()` y clases | `.css('opacity', 0.55)` atenúa las tarjetas al pausar los datos; `.css('display')` para saber qué tarjetas están ocultas; `.addClass/.removeClass` con clases de Bootstrap (`text-bg-*`, `border-*`, `bg-*`) según el estado; `.toggleClass('border-danger')` en el paro |
 | Métodos | `.text()`, `.html()`, `.val()`, `.attr()`, `.prop()`, `.data()`, `.append()`, `.empty()`, `.remove()`, `.hide()`, `.toggle()` |
 | Eventos | `click`, `change`, `input`, `keyup`, `submit`, `hover`, `mouseenter/mouseleave`, `focusin/focusout`, evento propio `telemetria` |
 | Efectos | `fadeIn`, `fadeOut`, `slideUp`, `slideDown`, `animate` (barra de batería), `delay` (toasts) |

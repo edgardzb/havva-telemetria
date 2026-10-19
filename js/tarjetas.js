@@ -1,22 +1,20 @@
-/* ==========================================================================
-   Fase 3 — Punto 5 del mapa: panel configurable y umbrales
-   Efectos, DOM avanzado (crear, clonar, insertar, recorrer) y jQuery UI Sortable.
-   ========================================================================== */
+// fase 3: tarjetas (fijar, ocultar, ordenar) y form de umbrales (punto 5)
 (function ($, Panel) {
   'use strict';
 
   const CLAVE_GUARDADO = 'havva-panel-v1';
+  const COLOR_TOAST = { info: 'text-bg-dark', ok: 'text-bg-success', aviso: 'text-bg-warning', error: 'text-bg-danger' };
 
-  /* ---------- Avisos breves (toasts) ---------- */
+  // toasts (con fadeIn, delay y fadeOut de jquery)
   Panel.toast = function (texto, tipo) {
-    const $t = $('<div>', { 'class': 'toast-panel toast-' + (tipo || 'info'), role: 'status' })
-      .text(texto)
+    const $t = $('<div>', { 'class': 'toast show border-0 ' + (COLOR_TOAST[tipo] || COLOR_TOAST.info), role: 'status' })
+      .append($('<div>').addClass('toast-body').text(texto))
       .hide()
       .appendTo('#toasts');
     $t.fadeIn(200).delay(2800).fadeOut(400, function () { $(this).remove(); });
   };
 
-  /* ---------- Guardar la disposición en este navegador ---------- */
+  // guardar el orden en localStorage
   function guardarDisposicion() {
     const $tarjetas = $('#panel-sensores').children('.tarjeta-sensor');
     const datos = {
@@ -25,7 +23,7 @@
       ocultas: $tarjetas.filter(function () { return $(this).css('display') === 'none'; })
         .map(function () { return $(this).data('sensor'); }).get()
     };
-    try { localStorage.setItem(CLAVE_GUARDADO, JSON.stringify(datos)); } catch (e) { /* sin almacenamiento: no pasa nada */ }
+    try { localStorage.setItem(CLAVE_GUARDADO, JSON.stringify(datos)); } catch (e) { /* si no hay localStorage no pasa nada */ }
   }
 
   function restaurarDisposicion() {
@@ -38,8 +36,9 @@
     });
     $.each(datos.colapsadas || [], function (_, clave) {
       const $t = $panel.children('[data-sensor="' + clave + '"]');
-      $t.addClass('colapsada').find('.ts-cuerpo').hide();
-      $t.find('[data-accion="colapsar"]').text('+').attr('aria-expanded', 'false');
+      $t.addClass('colapsada').find('.card-body').hide();
+      $t.find('.card').removeClass('h-100');
+      $t.find('[data-accion="colapsar"]').text('+');
     });
     $.each(datos.ocultas || [], function (_, clave) {
       $panel.children('[data-sensor="' + clave + '"]').hide();
@@ -53,7 +52,7 @@
     $('#btn-restaurar').toggle(n > 0).find('.n').text(n);
   }
 
-  /* ---------- Validación de umbrales ---------- */
+  // validar umbrales
   function validar($in) {
     const v = parseFloat($in.val());
     const min = parseFloat($in.attr('min'));
@@ -61,7 +60,7 @@
     const ok = !isNaN(v) && v >= min && v <= max;
     $in.toggleClass('is-invalid', !ok).toggleClass('is-valid', ok);
 
-    // El mensaje se crea la primera vez y se inserta justo después del campo.
+    // crear el mensaje de error si no existe
     let $msg = $in.next('.invalid-feedback');
     if (!$msg.length) {
       $msg = $('<div>').addClass('invalid-feedback');
@@ -75,12 +74,12 @@
     restaurarDisposicion();
     actualizarBotonRestaurar();
 
-    /* Reordenar con jQuery UI Sortable (arrastrar por el título) */
+    // ordenar arrastrando (jquery ui)
     $('#panel-sensores').sortable({
       items: '> .tarjeta-sensor',
-      handle: '.ts-cab',
+      handle: '.card-header',
       cancel: 'button',
-      placeholder: 'tarjeta-hueco',
+      placeholder: 'col tarjeta-hueco',
       forcePlaceholderSize: true,
       tolerance: 'pointer',
       update: function () {
@@ -89,18 +88,19 @@
       }
     });
 
-    /* Colapsar / expandir */
+    // colapsar
     $(document).on('click', '#panel-sensores [data-accion="colapsar"]', function () {
       const $btn = $(this);
       const $tarjeta = $btn.closest('.tarjeta-sensor');
       $tarjeta.toggleClass('colapsada');
       const colapsada = $tarjeta.hasClass('colapsada');
-      $tarjeta.children('.ts-cuerpo').stop(true, true)[colapsada ? 'slideUp' : 'slideDown'](200);
-      $btn.text(colapsada ? '+' : '−').attr('aria-expanded', String(!colapsada));
+      $tarjeta.find('.card').toggleClass('h-100', !colapsada);
+      $tarjeta.find('.card-body').stop(true, true)[colapsada ? 'slideUp' : 'slideDown'](200);
+      $btn.text(colapsada ? '+' : '−');
       guardarDisposicion();
     });
 
-    /* Ocultar (panel principal) o quitar (copias fijadas) */
+    // ocultar, o quitar si es una copia fijada
     $(document).on('click', '.tarjeta-sensor [data-accion="ocultar"]', function () {
       const $tarjeta = $(this).closest('.tarjeta-sensor');
       const nombre = $tarjeta.find('.ts-nombre').text();
@@ -130,7 +130,7 @@
       });
     });
 
-    /* Fijar: clona la tarjeta y la coloca hasta arriba de «Vigilando» */
+    // fijar: clonar la tarjeta y ponerla arriba
     $(document).on('click', '#panel-sensores [data-accion="fijar"]', function () {
       const $btn = $(this);
       const $original = $btn.closest('.tarjeta-sensor');
@@ -139,10 +139,10 @@
 
       const $copia = $original.clone();
       $copia.removeAttr('style').removeClass('colapsada ui-sortable-handle').addClass('fijada');
-      $copia.children('.ts-cuerpo').removeAttr('style');
+      $copia.find('.card').addClass('border-primary h-100');
+      $copia.find('.card-body').removeAttr('style');
       $copia.find('.rango').hide();
       $copia.find('[data-accion="fijar"], [data-accion="colapsar"]').remove();
-      $copia.find('[data-accion="ocultar"]').attr({ 'aria-label': 'Quitar de Vigilando', title: 'Quitar' });
 
       $copia.hide();
       if ($lista.children().length) $copia.insertBefore($lista.children().first());
@@ -156,7 +156,7 @@
       Panel.registrar('INFO', 'Operador', 'Tarjeta fijada: ' + $original.find('.ts-nombre').text());
     });
 
-    /* Umbrales: validación al escribir y al enviar */
+    // validar mientras escribe
     $('#form-umbrales').on('keyup input change', 'input', function () { validar($(this)); });
 
     $('#form-umbrales').on('submit', function (e) {

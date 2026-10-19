@@ -1,12 +1,10 @@
-/* ==========================================================================
-   Fase 3 — Punto 4 del mapa: registro de eventos con el plugin DataTables
-   Problema real: en 5 minutos de operación el robot genera cientos de eventos.
-   Una lista simple se vuelve inútil; DataTables da orden, paginación y búsqueda.
-   ========================================================================== */
+// fase 3: registro de eventos con datatables (punto 4)
+// con tantos eventos una lista normal ya no servia
 (function ($, Panel) {
   'use strict';
 
   const MAX_FILAS = 500;
+  const COLOR_TIPO = { INFO: 'text-bg-secondary', NAV: 'text-bg-primary', AVISO: 'text-bg-warning', ERROR: 'text-bg-danger' };
 
   function hora(d) {
     return d.toLocaleTimeString('es-MX', { hour12: false });
@@ -15,7 +13,7 @@
   $(function () {
     const $tabla = $('#tabla-registro');
 
-    // Las filas fijas eran el «registro» estático de la versión anterior.
+    // quitar las filas de ejemplo de la version estatica
     $tabla.find('tbody').empty();
 
     const tabla = $tabla.DataTable({
@@ -40,18 +38,17 @@
       }
     });
 
-    const filas = []; // nodos en orden de llegada, para recortar los más viejos
+    const filas = []; // para borrar los mas viejos
 
-    // Manipulación del DOM: cada evento se construye como elementos nuevos con $('<tr>').
+    // armar la fila con $('<tr>')
     function crearFila(evt) {
-      const tipo = evt.tipo;
-      const $tr = $('<tr>').addClass('fila-' + tipo.toLowerCase());
-      $('<td>').addClass('mono').attr('data-order', evt.t.getTime()).text(hora(evt.t)).appendTo($tr);
-      $('<td>').attr('data-search', tipo)
-        .append($('<span>').addClass('chip chip-' + tipo.toLowerCase()).text(tipo))
+      const $tr = $('<tr>');
+      $('<td>').attr('data-order', evt.t.getTime()).text(hora(evt.t)).appendTo($tr);
+      $('<td>').attr('data-search', evt.tipo)
+        .append($('<span>').addClass('badge ' + COLOR_TIPO[evt.tipo]).text(evt.tipo))
         .appendTo($tr);
       $('<td>').text(evt.fuente).appendTo($tr);
-      $('<td>').text(evt.mensaje).appendTo($tr);
+      $('<td>').text(evt.mensaje).toggleClass('text-danger', evt.tipo === 'ERROR').appendTo($tr);
       return $tr;
     }
 
@@ -69,25 +66,26 @@
         tabla.row(filas.shift()).remove().draw(false);
       }
 
-      $tr.addClass('recien');
-      setTimeout(function () { $tr.removeClass('recien'); }, 60);
+      // resaltar la fila nueva un momento
+      $tr.addClass('table-info');
+      setTimeout(function () { $tr.removeClass('table-info'); }, 1200);
 
       if (evt.tipo === 'ERROR') Panel.toast(evt.fuente + ': ' + evt.mensaje, 'error');
       actualizarTotal();
     }
 
-    // Filtro por tipo: los checkboxes marcados (:checked) arman una expresión regular.
+    // filtro por tipo con los checkbox marcados
     function filtrarTipos() {
       const tipos = $('.filtro-tipo:checked').map(function () { return $(this).val(); }).get();
       const patron = tipos.length ? '^(' + tipos.join('|') + ')$' : '^$';
       tabla.column(1).search(patron, true, false).draw();
       $('.filtro-tipo').each(function () {
-        $(this).parent().toggleClass('inactivo', !this.checked);
+        $(this).parent().toggleClass('opacity-50', !this.checked);
       });
     }
     $('.filtro-tipo').on('change', filtrarTipos);
 
-    // Búsqueda libre mientras escribes
+    // buscador
     $('#buscar-registro').on('keyup search', function () {
       tabla.search($(this).val()).draw();
     });
@@ -99,7 +97,7 @@
       Panel.toast('Registro limpiado', 'info');
     });
 
-    // Conectar el registro y vaciar la cola de eventos que llegaron antes
+    // meter los eventos que llegaron antes de que cargara la tabla
     Panel._sumidero = agregar;
     $.each(Panel._cola.splice(0), function (_, evt) { agregar(evt); });
     actualizarTotal();
