@@ -17,12 +17,12 @@ Opción elegida: **A — Panel de telemetría** con datos simulados.
 
 ## Cómo correrlo
 
-No necesita instalación: abre `index.html` en el navegador (con internet, porque las librerías vienen de CDN). Para servirlo localmente:
+No necesita instalar nada. Hay dos formas:
 
-```bash
-python3 -m http.server 8000
-# luego abre http://localhost:8000
-```
+- En VS Code, con la extensión **Live Server**: abre `index.html` y da clic en **Go Live** (barra de abajo).
+- O abre `index.html` con doble clic en el navegador.
+
+Necesita internet porque Bootstrap, jQuery y los plugins se cargan por CDN.
 
 ## Estructura
 
