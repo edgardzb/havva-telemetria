@@ -86,4 +86,4 @@ El sitio es estático. Para publicarlo en GitHub Pages: *Settings → Pages → 
 
 ## Uso de IA
 
-Este proyecto se desarrolló con asistencia de Claude (Anthropic). Ver la declaración completa en el documento de decisiones técnicas.
+Este proyecto se desarrolló con asistencia de Claude (Anthropic). Claude apoyo en la orientación poco a poco del usuario para poder mentorarlo en cada momento que necesite, corregirlo y arreglar código o lógica.
